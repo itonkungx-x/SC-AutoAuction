@@ -178,9 +178,16 @@ public final class PriceExtractorModule implements AutomationModule {
         }
 
         String scanMode = EasyLifeSystemConfig.get().priceScanMode;
-        if (!"auto".equals(scanMode)) scanHoveredSlot(mc, screen);
+        if (!"auto".equals(scanMode) || EasyLifeSystemConfig.get().autoScanWorthPages)
+            scanHoveredSlot(mc, screen);
+        // Real auto-hover is stepped across frames, not performed by reading all
+        // item lore without moving the cursor.
+        if (EasyLifeSystemConfig.get().autoScanWorthPages) {
+            pageScanner.tick(mc, screen, PriceExtractorModule::hasSavedPrice);
+            pageScanStatus = pageScanner.getStatus();
+        }
 
-        if ("hover".equals(scanMode)) {
+        if ("hover".equals(scanMode) && !EasyLifeSystemConfig.get().autoScanWorthPages) {
             statusTh = "Hover เท่านั้น • จับได้ " + observedTooltipCalls
                 + " ครั้ง • ราคา " + observedTooltipPrices + " • สะสม " + itemCount;
             statusEn = "Hover only • Tooltips " + observedTooltipCalls
@@ -275,10 +282,8 @@ public final class PriceExtractorModule implements AutomationModule {
         }
         lastScanned = seen;
         lastPriceLines = linesFound;
-        if (topSlots == 54 && !"hover".equals(scanMode)) {
-            pageScanner.tick(mc, screen, seen, linesFound);
-            pageScanStatus = pageScanner.getStatus();
-        }
+        // Navigation is handled only by the real, frame-stepped cursor
+        // scanner above after all product hovers are completed.
         statusTh = "กำลังสแกน /worth • พบช่อง " + seen + " • มีราคา " + linesFound
             + " • สะสม " + itemCount;
         statusEn = "Scanning /worth • Items " + seen + " • Priced " + linesFound
@@ -392,6 +397,15 @@ public final class PriceExtractorModule implements AutomationModule {
     }
 
 
+    private static boolean hasSavedPrice(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        String key = id + "|" + stack.getHoverName().getString();
+        synchronized (PriceExtractorModule.class) {
+            return ENTRIES.containsKey(key);
+        }
+    }
+
     private static int filledListingSlots(List<Slot> slots) {
         if (slots == null || slots.size() <= 36) return 0;
         int limit = slots.size() - 36;
@@ -414,7 +428,8 @@ public final class PriceExtractorModule implements AutomationModule {
     public static void observeRenderedTooltip(ItemStack stack, List<Component> lines) {
         if (stack == null || stack.isEmpty() || lines == null || lines.isEmpty()) return;
         EasyLifeSystemConfig cfg = EasyLifeSystemConfig.get();
-        if (!cfg.priceExtractorEnabled || "auto".equals(cfg.priceScanMode)) return;
+        if (!cfg.priceExtractorEnabled ||
+            ("auto".equals(cfg.priceScanMode) && !cfg.autoScanWorthPages)) return;
         Minecraft mc = Minecraft.getInstance();
         // The older ItemPriceExtractor captured rendered tooltips without
         // requiring an exact /worth title. Keep that behavior: custom shop GUIs
@@ -523,20 +538,19 @@ public final class PriceExtractorModule implements AutomationModule {
         if (now - lastShortcutNanos < 150_000_000L) return;
         lastShortcutNanos = now;
         EasyLifeSystemConfig cfg = EasyLifeSystemConfig.get().copy();
-        // In /worth, F7 means "start/check" rather than accidentally switching
-        // off a scanner already enabled through the Mod Menu.
+        // F7 toggles real automatic scanning inside /worth.
         boolean insideWorth = mc != null && mc.gui != null
             && mc.gui.screen() instanceof AbstractContainerScreen<?> screen
             && isWorthTitle(screen.getTitle().getString());
         if (insideWorth) {
-            if (cfg.priceExtractorEnabled) {
-                say(mc, "Price Scan เปิดอยู่แล้ว • รายการ " + itemCount
-                    + " • " + getDiagnostics());
-            } else {
-                cfg.priceExtractorEnabled = true;
-                EasyLifeSystemConfig.save(cfg);
-                say(mc, "เปิด Price Scan แล้ว • กำลังอ่าน /worth");
-            }
+            boolean wasAutoRunning = cfg.priceExtractorEnabled && cfg.autoScanWorthPages;
+            cfg.priceExtractorEnabled = true;
+            cfg.autoScanWorthPages = !wasAutoRunning;
+            if (cfg.autoScanWorthPages) cfg.priceScanMode = "both";
+            EasyLifeSystemConfig.save(cfg);
+            say(mc, cfg.autoScanWorthPages
+                ? "เริ่ม Auto Hover ทุกช่องและทุกหน้า • F7 เพื่อหยุด"
+                : "หยุด Auto Hover แล้ว • ราคาที่เก็บไว้ยังอยู่");
         } else {
             cfg.priceExtractorEnabled = !cfg.priceExtractorEnabled;
             EasyLifeSystemConfig.save(cfg);

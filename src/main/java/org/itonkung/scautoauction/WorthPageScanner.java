@@ -7,113 +7,166 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.glfw.GLFW;
 
+import java.lang.reflect.Field;
+import java.nio.DoubleBuffer;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Fail-closed navigator for Siamcraft's observed /worth 6-row chest UI.
- * Item region: columns 2..7, rows 1..4. Next page: slot (5,7) = 52.
- *
- * Sends a single normal left click on a verified arrow every page.
- * Never interacts with the player's inventory, any other GUI or an unknown
- * menu layout; waits for a title page change before another click.
+ * Real cursor-hover scanner for the Siamcraft /worth 6-row GUI.
+ * Product positions: 6 columns x 4 rows. Next button: slot 52 (0-based).
+ * One cursor movement per product, then wait for the Minecraft tooltip renderer.
  */
 public final class WorthPageScanner {
-    private static final Pattern PAGE_TITLE = Pattern.compile(
+    private static final Pattern PAGE = Pattern.compile(
         "(?i)worth\\s*[(（]\\s*(\\d{1,4})\\s*/\\s*(\\d{1,4})\\s*[)）]");
-    private static final int NEXT_SLOT = 5 * 9 + 7;
-    private int page = -1, total = -1, elapsedInPage, waitingForPage = -1, pendingTicks;
-    private boolean stopped, notified;
+    private static final int NEXT = 52;
+    private static final int HOVER_WAIT = 2;          // 2 cycles of 4 ticks
+    private static final int HOVER_MAX_WAIT = 6;
+    private static final int PAGE_MAX_WAIT = 30;
+    private int current = -1, total = -1, waitingFor = -1, wait = 0;
+    private int cursor = 0, dwell = 0, priced = 0, missing = 0;
+    private boolean stopped = false, announced = false, savedPointer = false;
+    private double originalX, originalY;
     private String status = "รอเปิด /worth";
+    private final List<Integer> targets = new ArrayList<>();
 
-    public static boolean itemSlot(int slot) {
-        int row = slot / 9, col = slot % 9;
-        return row >= 1 && row <= 4 && col >= 2 && col <= 7;
+    public static boolean itemSlot(int index) {
+        int row = index / 9, column = index % 9;
+        return row >= 1 && row <= 4 && column >= 2 && column <= 7;
     }
-
     public String getStatus() { return status; }
-
-    public void reset() {
-        page = -1;
-        total = -1;
-        elapsedInPage = 0;
-        waitingForPage = -1;
-        pendingTicks = 0;
-        stopped = false;
-        notified = false;
-        status = "รอเปิด /worth";
+    public void reset() { reset(Minecraft.getInstance()); }
+    public void reset(Minecraft mc) {
+        restorePointer(mc);
+        current=-1; total=-1; waitingFor=-1; wait=0;
+        cursor=0; dwell=0; priced=0; missing=0;
+        stopped=false; announced=false; targets.clear();
+        status="รอเปิด /worth";
     }
 
-    public void tick(Minecraft mc, AbstractContainerScreen<?> screen, int scanned, int priced) {
+    public void tick(Minecraft mc, AbstractContainerScreen<?> screen,
+                     Predicate<ItemStack> savedPrice) {
         if (!EasyLifeSystemConfig.get().autoScanWorthPages) {
-            if (page != -1) reset();
+            if (current!=-1 || savedPointer) reset(mc);
             return;
         }
-        if (stopped || mc == null || mc.player == null || mc.gameMode == null) return;
-        Matcher match = PAGE_TITLE.matcher(screen.getTitle().getString());
-        if (!match.find()) {
-            status = "หยุด: ชื่อหน้า /worth ไม่ตรงรูปแบบ";
-            stopped = true; return;
+        if (stopped || mc==null || mc.player==null || mc.gameMode==null) return;
+        Matcher m=PAGE.matcher(screen.getTitle().getString());
+        if (!m.find()) { stop(mc,"หยุด: ไม่พบชื่อ WORTH (หน้า/ทั้งหมด)"); return; }
+        int page=Integer.parseInt(m.group(1)), pages=Integer.parseInt(m.group(2));
+        if (pages<1 || pages>500 || page<1 || page>pages) {
+            stop(mc,"หยุด: หมายเลขหน้าไม่ถูกต้อง"); return;
         }
-        int current = Integer.parseInt(match.group(1)), maximum = Integer.parseInt(match.group(2));
-        if (maximum < 1 || maximum > 500 || current < 1 || current > maximum) {
-            stop(mc,"หยุด: หมายเลขหน้าผิดปกติ"); return;
-        }
-        if (screen.getMenu().slots.size() < 54) {
-            stop(mc,"หยุด: GUI ไม่ใช่ 6 แถว"); return;
-        }
-        if (waitingForPage > 0) {
-            if (current == waitingForPage) {
-                waitingForPage = -1;
-                pendingTicks = 0;
-            } else {
-                if (++pendingTicks > 7) stop(mc,"หยุด: เซิร์ฟเวอร์ยังไม่เปลี่ยนหน้า");
-                return; // Never send the same click twice.
-            }
-        }
-        if (current != page || maximum != total) {
-            page = current; total = maximum; elapsedInPage = 0;
-            status = "กำลังสแกนหน้า " + page + "/" + total;
-            if (!notified) {
-                notified = true;
-                mc.player.sendSystemMessage(Component.literal(
-                    "[Easylife] สแกน /worth ทุกหน้า เริ่มจาก " + page + "/" + total));
-            }
-        }
-        if (current == maximum) {
-            stop(mc,"ครบแล้ว " + total + " หน้า"); return;
-        }
-        if (++elapsedInPage < 2) return;  // At least 24 ticks after reading the page.
-        if (priced == 0 || scanned == 0) {
-            if (elapsedInPage > 9) stop(mc,"หยุด: หน้านี้ยังอ่านราคาไม่ได้");
-            return;
-        }
-        // Prevent carrying, swapping or moving actual items.
+        List<Slot> all=screen.getMenu().slots;
+        if (all.size()<90) { stop(mc,"หยุด: /worth ไม่มีช่องครบ 6 แถว"); return; }
         if (!screen.getMenu().getCarried().isEmpty()) {
-            stop(mc,"หยุด: มีของติดเคอร์เซอร์อยู่"); return;
+            stop(mc,"หยุด: ไอเท็มติดเคอร์เซอร์อยู่"); return;
         }
-        List<Slot> slots = screen.getMenu().slots;
-        if (NEXT_SLOT >= slots.size()) {
-            stop(mc,"หยุด: ไม่มีช่องหน้าถัดไป"); return;
+        if (waitingFor>0) {
+            if (page!=waitingFor) {
+                if (++wait>PAGE_MAX_WAIT) stop(mc,"หยุด: เซิร์ฟเวอร์ไม่เปลี่ยนหน้า");
+                return;
+            }
+            waitingFor=-1; wait=0;
         }
-        ItemStack button = slots.get(NEXT_SLOT).getItem();
-        String itemId = button.isEmpty() ? "" :
-            BuiltInRegistries.ITEM.getKey(button.getItem()).toString();
-        if (!"minecraft:arrow".equals(itemId)) {
-            stop(mc,"หยุด: ช่องหน้าถัดไปไม่ใช่ลูกศร"); return;
+        if (page!=current || pages!=total) {
+            current=page; total=pages; cursor=0; dwell=0; priced=0; missing=0;
+            targets.clear();
+            for (int i=0;i<54;i++) {
+                if (itemSlot(i) && !all.get(i).getItem().isEmpty()) targets.add(i);
+            }
+            if (targets.isEmpty()) { stop(mc,"หยุด: ไม่พบสินค้าในกรอบ"); return; }
+            if (!announced) {
+                announced=true;
+                say(mc,"เริ่ม Auto Hover " + pages + " หน้า • กด F7 เพื่อหยุด");
+            }
+            status="หน้า "+page+"/"+pages+" • เริ่ม "+targets.size()+" ช่อง";
+        }
+
+        if (cursor<targets.size()) {
+            Slot slot=all.get(targets.get(cursor));
+            if (dwell==0) {
+                if (!movePointer(mc,screen,slot)) {
+                    stop(mc,"หยุด: ขยับเมาส์ไปช่องไอเท็มไม่สำเร็จ"); return;
+                }
+                dwell=1;
+                status="หน้า "+page+"/"+pages+" • Hover "+(cursor+1)+"/"+targets.size()
+                    +" • พบราคา "+priced;
+                return;
+            }
+            dwell++;
+            boolean found=savedPrice.test(slot.getItem());
+            if (dwell<HOVER_WAIT || (!found && dwell<HOVER_MAX_WAIT)) return;
+            if (found) priced++; else missing++;
+            cursor++; dwell=0;
+            return;
+        }
+
+        if (missing>0 || priced==0) {
+            stop(mc,"หยุดหน้า "+page+": ราคาไม่ครบ "+priced+"/"+targets.size()
+                +" • ส่งไฟล์ easylife-price-diagnostic.json เพื่อแก้");
+            return;
+        }
+        if (page==pages) {
+            stop(mc,"สแกนครบ "+pages+" หน้า • รายการถูกบันทึกแล้ว");
+            return;
+        }
+        ItemStack arrow=all.get(NEXT).getItem();
+        String id=arrow.isEmpty()?"":BuiltInRegistries.ITEM.getKey(arrow.getItem()).toString();
+        if (!"minecraft:arrow".equals(id)) {
+            stop(mc,"หยุด: ช่อง 52 ไม่ใช่ลูกศรหน้าถัดไป ("+id+")");
+            return;
         }
         mc.gameMode.handleContainerInput(screen.getMenu().containerId,
-            NEXT_SLOT, 0, ContainerInput.PICKUP, mc.player);
-        waitingForPage = page + 1;
-        pendingTicks = 0;
-        status = "เปลี่ยนหน้า " + page + " → " + waitingForPage;
+            NEXT, 0, ContainerInput.PICKUP, mc.player);
+        waitingFor=page+1; wait=0;
+        status="หน้า "+page+"/"+pages+" • กำลังเปลี่ยนเป็นหน้า "+waitingFor;
     }
 
-    private void stop(Minecraft mc, String message) {
-        status = message; stopped = true;
-        if (mc.player != null)
-            mc.player.sendSystemMessage(Component.literal("[Easylife] " + message));
+    private boolean movePointer(Minecraft mc, AbstractContainerScreen<?> screen, Slot slot) {
+        try {
+            Field left=AbstractContainerScreen.class.getDeclaredField("leftPos");
+            Field top=AbstractContainerScreen.class.getDeclaredField("topPos");
+            left.setAccessible(true);
+            top.setAccessible(true);
+            double guiX=left.getInt(screen)+slot.x+8;
+            double guiY=top.getInt(screen)+slot.y+8;
+            long hwnd=mc.getWindow().getWindow();
+            if (!savedPointer) {
+                DoubleBuffer x=BufferUtils.createDoubleBuffer(1);
+                DoubleBuffer y=BufferUtils.createDoubleBuffer(1);
+                GLFW.glfwGetCursorPos(hwnd,x,y);
+                originalX=x.get(0); originalY=y.get(0); savedPointer=true;
+            }
+            double px=guiX*mc.getWindow().getWidth() / Math.max(1,mc.getWindow().getGuiScaledWidth());
+            double py=guiY*mc.getWindow().getHeight() / Math.max(1,mc.getWindow().getGuiScaledHeight());
+            GLFW.glfwSetCursorPos(hwnd,px,py);
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException ex) {
+            System.err.println("[Easylife] Auto Hover: "+ex.getClass().getSimpleName()+": "+ex.getMessage());
+            return false;
+        }
+    }
+    private void restorePointer(Minecraft mc) {
+        if (!savedPointer) return;
+        savedPointer=false;
+        if (mc==null) return;
+        try { GLFW.glfwSetCursorPos(mc.getWindow().getWindow(),originalX,originalY); }
+        catch (RuntimeException ignored) {}
+    }
+    private void stop(Minecraft mc,String message) {
+        if (stopped) return;
+        stopped=true;status=message;restorePointer(mc);say(mc,message);
+    }
+    private void say(Minecraft mc,String message) {
+        if (mc!=null && mc.player!=null)
+            mc.player.sendSystemMessage(Component.literal("[Easylife] "+message));
     }
 }
