@@ -25,6 +25,8 @@ jobs:
           JAR=$(find build/libs -maxdepth 1 -name 'Easylife-in-Siamcraft-26.3-*.jar' ! -name '*-sources.jar' | head -n 1)
           test -s "$JAR"
           jar tf "$JAR" | grep -Fq 'org/itonkung/scautoauction/PriceExtractorModule.class'
+          jar tf "$JAR" | grep -Fq 'org/itonkung/scautoauction/WorthPageScanner.class'
+          jar tf "$JAR" | grep -Fq 'org/itonkung/scautoauction/PriceArchive.class'
           jar tf "$JAR" | grep -Fq 'org/itonkung/scautoauction/LegacyUnitPriceParser.class'
           jar tf "$JAR" | grep -Fq 'org/itonkung/scautoauction/PriceToast.class'
           jar tf "$JAR" | grep -Fq 'org/itonkung/scautoauction/mixin/WorthKeyboardMixin.class'
@@ -44,6 +46,20 @@ jobs:
           javap -verbose -classpath "$JAR" org.itonkung.scautoauction.EasyLifeSystemConfig > loader-linkage.txt
           grep 'InterfaceMethodref' loader-linkage.txt | grep -Fq 'FabricLoader.getInstance'
           echo 'FabricLoader interface linkage OK'
+      - name: Validate dashboard JavaScript
+        run: |
+          node --check dashboard/api/items.js
+          node --check dashboard/api/sync.js
+          node - <<'NODE'
+          const fs=require('fs');
+          for(const path of ['dashboard/index.html','src/main/resources/assets/scautoauction/web/index.html']){
+            const content=fs.readFileSync(path,'utf8');
+            const found=content.match(/<script>([\s\S]*?)<\/script>/);
+            if(!found)throw Error('Missing dashboard JS: '+path);
+            fs.writeFileSync('/tmp/easylife-ui.mjs',found[1]);
+            require('child_process').execFileSync('node',['--check','/tmp/easylife-ui.mjs'],{stdio:'inherit'});
+          }
+          NODE
       - name: Smoke-test safe shutdown installer
         run: |
           set -euo pipefail

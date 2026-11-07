@@ -177,5 +177,17 @@ Easylife now adapts all four ideas to the existing Price Extractor module. The S
 - Page search, A–Z / lowest price / highest price sort, cached polling, lazy-load and 48-card pagination support 1,100+ items without rebuilding 1,100 image nodes each second.
 - Serves the existing Siamcraft logo from `/logo.png` on the local Price Extractor HTTP server so the logo works offline.
 - Preserves /worth scanner, Auction, Auto / Hover / Both, Thai/English Mod Menu UI and auto updater behavior.
-- Release asset must be published on GitHub as `Easylife-in-Siamcraft-26.3-0.2.12.jar` for existing v0.2.11 auto-updaters to discover it.
+- Release asset must be published on GitHub as `Easylife-in-Siamcraft-26.3-0.2.13.jar` for existing v0.2.11 auto-updaters to discover it.
 - Image icons use a third-party online render API; custom server-specific items may use text fallback. Actual in-game Price Extractor end-to-end testing is separate from build checks.
+
+## v0.2.13 — Auto /worth pagination + persistent web sync
+
+- Mod Menu Price Scan: added independent **เปลี่ยนหน้าอัตโนมัติ** toggle (OFF by default for safety).
+- Scans 24 product slots as marked on the user screenshot: 6 columns x 4 rows. Excludes navigation and decorative slots.
+- Verifies the WORTH (page/total) screen and the arrow at slot 52 (0-indexed) before sending a single left click to advance. Waits for a page change before clicking again. Stops on unfamiliar layout, non-arrow item, nonempty cursor, timeout or final page.
+- Saves scanned price entries to config/easylife-price-cache.json. Existing entries are restored on Minecraft restart.
+- Optional authenticated cloud sync uploads changed snapshots at most once per 30 seconds using config/easylife-remote.json (token is never committed to GitHub).
+- Dashboard: logo-only header; removes marked status, search, source and item ID badges. Uses Title Case item names, stable image nodes, compact sorting near the item list and paginates results.
+- Deployed at https://siamcraft-price.vercel.app using a private Vercel Blob store and a token-protected /api/sync endpoint. The public /api/items endpoint is read-only.
+- Installation: Place the JAR in mods/. Place the separately delivered easylife-remote.json in config/ (do NOT replace easylife-systems.json). Enable Price Scan, choose Auto/Both, enable automatic page scanning, then open /worth.
+- LIMITATIONS: Live Minecraft server GUI compatibility is not verified by CI. The observed next-arrow slot and item type can change if a plugin updates. Online storage incurs usage subject to the Vercel account quota. Custom item icon imagery may have external-render-service fallbacks.
