@@ -90,7 +90,6 @@ public final class PriceExtractorModule implements AutomationModule {
         String status = "en_us".equals(language) ? statusEn : statusTh;
         return lastError.isBlank() ? status : lastError;
     }
-    public String getPageScanStatus() { return pageScanner.getStatus(); }
 
     public static String getDiagnostics() {
         // Compact: the Settings screen intentionally truncates strings > 62 chars.
