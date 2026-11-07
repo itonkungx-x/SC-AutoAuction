@@ -538,6 +538,7 @@ public final class PriceExtractorModule implements AutomationModule {
         stopServer();
         try {
             HttpServer http = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
+            http.createContext("/logo.png", ex -> serveLogo(ex));
             http.createContext("/", ex -> serve(ex, loadWebsite(), "text/html; charset=utf-8"));
             http.createContext("/items", ex -> serve(ex, itemsJson(), "application/json; charset=utf-8"));
             http.createContext("/data", ex -> serve(ex, lastJson, "application/json; charset=utf-8"));
@@ -578,6 +579,24 @@ public final class PriceExtractorModule implements AutomationModule {
             return new String(input.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             return "<h1>Unable to open Price Extractor page</h1>";
+        }
+    }
+
+    /** Serve Siamcraft's bundled logo locally: the dashboard needs no external logo host. */
+    private static void serveLogo(HttpExchange ex) throws IOException {
+        try (InputStream in = PriceExtractorModule.class.getResourceAsStream(
+                "/assets/scautoauction/textures/gui/siamcraft_logo.png")) {
+            if (in == null) {
+                ex.sendResponseHeaders(404, -1);
+                ex.close();
+                return;
+            }
+            byte[] image = in.readAllBytes();
+            ex.getResponseHeaders().set("Content-Type", "image/png");
+            ex.getResponseHeaders().set("Cache-Control", "public, max-age=86400");
+            ex.getResponseHeaders().set("X-Content-Type-Options", "nosniff");
+            ex.sendResponseHeaders(200, image.length);
+            try (OutputStream out = ex.getResponseBody()) { out.write(image); }
         }
     }
 

@@ -168,3 +168,14 @@ Easylife now adapts all four ideas to the existing Price Extractor module. The S
 - Manual test: Mod Menu → Easylife → Price Scan → Enable → **Hover only** → Save. Open /worth and hover Dragon Egg. The correct expected sample is **1,000,000 per item** and **64,000,000 per stack**.
 - If the user does not see the Toast/chat event, inspect `config/easylife-price-diagnostic.json` plus the Easylife lines in `logs/latest.log`; a Mixin may not run in custom container tooltips.
 - Do not package any stubs from the old source zip in the new mod. They were compilation scaffolds, not runtime classes.
+
+
+## v0.2.12 — Price Extractor web redesign, fixed icon image source
+
+- Updated `assets/scautoauction/web/index.html` to a responsive dark/amber Siamcraft dashboard.
+- Fixed missing item images caused by `mcasset.cloud/26.3/assets/...` texture paths; icons now try the BlockRender render/item and render/block endpoints with a readable fallback if an icon cannot be fetched.
+- Page search, A–Z / lowest price / highest price sort, cached polling, lazy-load and 48-card pagination support 1,100+ items without rebuilding 1,100 image nodes each second.
+- Serves the existing Siamcraft logo from `/logo.png` on the local Price Extractor HTTP server so the logo works offline.
+- Preserves /worth scanner, Auction, Auto / Hover / Both, Thai/English Mod Menu UI and auto updater behavior.
+- Release asset must be published on GitHub as `Easylife-in-Siamcraft-26.3-0.2.12.jar` for existing v0.2.11 auto-updaters to discover it.
+- Image icons use a third-party online render API; custom server-specific items may use text fallback. Actual in-game Price Extractor end-to-end testing is separate from build checks.

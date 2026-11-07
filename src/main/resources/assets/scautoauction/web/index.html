@@ -2,67 +2,154 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
 <title>Siamcraft • Price Extractor</title>
 <style>
-:root{color-scheme:dark;--gold:#ffbd48;--bg:#111216;--panel:#22242b}
+:root{--gold:#ffbf62;--gold2:#ff9a36;--text:#f5efe5;--sub:#b7b1ac;--border:#39353a;--bg:#111016;--panel:#201f27}
 *{box-sizing:border-box}
-body{margin:0;background:radial-gradient(ellipse at 50% -40%,#4d3219 0%,var(--bg) 65%);font:14px system-ui,"Segoe UI",sans-serif;color:#f3f0e8;min-height:100vh}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1080px;margin:0 auto;padding:25px 20px 16px;border-bottom:1px solid #4b3d27;flex-wrap:wrap}
-.brand{font-weight:900;letter-spacing:.1em;font-size:16px;color:var(--gold)}
-.tools{display:flex;align-items:center;gap:12px;font-size:12px;color:#c7c0b5}
-select{padding:9px 34px 9px 12px;border:1px solid #a16d26;border-radius:9px;background:#242128;color:#f9f4ea}
-main{max-width:1080px;margin:0 auto;padding:24px 20px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:14px}
-.item{border:1px solid #454049;border-radius:16px;background:linear-gradient(165deg,#29272e,#1b1c22);min-height:146px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 8px;box-shadow:0 5px 18px #0004}
-.item img{height:64px;width:64px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0px 5px 3px #0008)}
-.item .price{font-size:18px;font-weight:800;color:var(--gold);margin-top:12px;word-break:break-word}
-#empty{color:#b6b4bd;margin-top:55px;text-align:center}
+html{scroll-behavior:smooth}
+body{margin:0;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--text);min-height:100vh;background:radial-gradient(ellipse at 52% -18%,#493019 0%,#1d1820 35%,#111016 76%)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.09;background-image:linear-gradient(#fff2 1px,transparent 1px),linear-gradient(90deg,#fff2 1px,transparent 1px);background-size:32px 32px;mask-image:linear-gradient(#0007,transparent 85%)}
+.wrap{width:min(1340px,calc(100% - 44px));margin:auto;position:relative}
+header{background:#101015dc;border-bottom:1px solid #ffb24740;backdrop-filter:blur(16px);position:relative}
+.hero{padding:26px 0;display:flex;justify-content:space-between;gap:25px;align-items:center;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:20px;min-width:0}
+.brand img{width:160px;max-height:72px;object-fit:contain;filter:drop-shadow(0 6px 16px #ff7e0040)}
+h1{margin:0;color:#ffcf85;font-size:clamp(21px,2.5vw,30px);letter-spacing:.025em;line-height:1.17}
+.tagline{margin:6px 0 0;color:var(--sub);font-size:12px}
+.controls{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:7px;color:var(--sub);font-size:12px}
+.field input,.field select{height:45px;border:1px solid #805f40;border-radius:12px;background:#25212a;color:var(--text);font:500 13px system-ui,sans-serif;padding:0 14px;min-width:160px;outline:none}
+.field input{min-width:min(270px,76vw)}
+.field input:focus,.field select:focus{border-color:var(--gold);box-shadow:0 0 0 3px #ffb34122}
+.stats{display:flex;gap:12px;flex-wrap:wrap;padding:4px 0 21px}
+.stat{background:linear-gradient(160deg,#28242c,#1b1b23);border:1px solid #554435;border-radius:14px;padding:10px 15px;min-width:150px}
+.stat span{color:var(--sub);font-size:11px;display:block}
+.stat strong{font-size:20px;color:#ffe3b2;display:block}
+.stat.status{flex:1;min-width:210px}
+.stat.status strong{font-size:14px;margin-top:4px}
+main{padding:28px 0 50px}
+.list-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.list-head h2{font-size:18px;color:#ffcf85;margin:0}
+.note{font-size:12px;color:var(--sub)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(167px,1fr));gap:16px}
+.item{border:1px solid #39363d;border-radius:20px;background:linear-gradient(155deg,#282730,#1a1a21);min-height:226px;padding:17px 13px;position:relative;box-shadow:0 12px 27px #0005;display:flex;flex-direction:column;align-items:center;transition:transform .2s,border-color .2s}
+.item:hover{transform:translateY(-3px);border-color:#df9c4d;box-shadow:0 17px 35px #0008}
+.item::before{content:"";position:absolute;inset:0 0 auto;height:67px;background:linear-gradient(180deg,#ffbb3b14,transparent);border-radius:20px 20px 0 0}
+.icon{width:92px;height:92px;border-radius:19px;background:radial-gradient(circle at 30% 20%,#ffffff22,#ffffff03);border:1px solid #ffffff20;display:flex;align-items:center;justify-content:center;margin:2px auto 11px;position:relative}
+.icon img{width:72px;height:72px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 8px 8px #0008)}
+.fallback{display:none;font-weight:800;font-size:21px;color:#ffdf98;background:linear-gradient(135deg,#4c3b2a,#352b28);border-radius:14px;width:72px;height:72px;align-items:center;justify-content:center}
+.icon.failed img{display:none}.icon.failed .fallback{display:flex}
+.name{font-weight:700;font-size:13px;text-align:center;line-height:1.25;min-height:38px;max-width:100%;overflow-wrap:anywhere;display:flex;align-items:center}
+.price{font-size:21px;color:var(--gold);font-weight:850;margin-top:auto;padding-top:12px;letter-spacing:.012em}
+.price::before{content:"⛁ ";font-size:15px}
+.itemid{font-size:10px;color:#aaa4a7;text-align:center;margin-top:5px;max-width:100%;overflow-wrap:anywhere}
+.empty{padding:50px 22px;border:1px dashed #605047;border-radius:18px;text-align:center;color:var(--sub)}
+.pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin:28px 0 10px}
+.pagination button{border:1px solid #805f40;background:#29222b;color:var(--text);padding:10px 16px;border-radius:12px;cursor:pointer}
+.pagination button:disabled{opacity:.4;cursor:default}
+.pagination span{font-weight:650;color:var(--gold)}
+footer{text-align:center;color:#88838c;padding:14px 0 34px;font-size:12px}
+@media(max-width:850px){.brand img{width:116px}.stats{display:grid;grid-template-columns:repeat(2,1fr)}.stat.status{grid-column:1/-1}.grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:11px}.item{min-height:202px}.hero{padding:20px 0}.wrap{width:min(100% - 26px,1340px)}}
+@media(max-width:540px){.brand{width:100%}.controls{width:100%}.field,.field input,.field select{width:100%}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.brand img{width:102px}.list-head .note{display:none}}
 </style>
 </head>
 <body>
-<header><span class="brand">SIAMCRAFT PRICE EXTRACTOR</span><div class="tools"><span id="count">0 รายการ</span><label>เรียงตาม <select id="sort">
-<option value="az">ชื่อ A–Z</option>
-<option value="low">ราคาน้อย → มาก</option>
-<option value="high">ราคามาก → น้อย</option>
-</select></label></div></header>
-<main><div id="grid" class="grid"></div><p id="empty">เปิด /worth ในเกมเพื่อสแกนรายการที่แสดง</p></main>
+<header>
+ <div class="wrap">
+  <div class="hero">
+   <div class="brand"><img src="/logo.png" alt="Siam Craft" width="160" height="72"><div><h1>Price Extractor</h1><p class="tagline">ราคาไอเท็ม Siamcraft จาก /worth • แสดงผลแบบเรียลไทม์</p></div></div>
+   <div class="controls">
+    <label class="field">ค้นหา<input id="search" type="search" placeholder="ชื่อไอเท็ม หรือ Minecraft ID" autocomplete="off"></label>
+    <label class="field">เรียงตาม<select id="sort">
+     <option value="az">ชื่อ A–Z</option>
+     <option value="low">ราคาน้อย → มาก</option>
+     <option value="high">ราคามาก → น้อย</option>
+    </select></label>
+   </div>
+  </div>
+  <section class="stats">
+   <div class="stat"><span>รายการที่สแกนแล้ว</span><strong id="count">0</strong></div>
+   <div class="stat"><span>อัปเดตล่าสุด</span><strong id="last">—</strong></div>
+   <div class="stat status"><span>สถานะระบบ</span><strong id="status">กำลังเชื่อมต่อ...</strong></div>
+  </section>
+ </div>
+</header>
+<main class="wrap">
+ <div class="list-head"><h2>รายการราคาไอเท็ม</h2><span class="note" id="subtitle">รีเฟรชจากม็อดทุก 1 วินาที</span></div>
+ <div class="grid" id="grid"></div>
+ <div class="empty" id="empty">ยังไม่มีข้อมูลราคา — เปิด /worth และสแกนในเกม</div>
+ <nav class="pagination" id="pages" hidden><button type="button" id="prev">ก่อนหน้า</button><span id="pageLabel"></span><button type="button" id="next">ถัดไป</button></nav>
+</main>
+<footer>Siamcraft Price Extractor · Easylife in Siamcraft</footer>
 <script>
-const $ = id => document.getElementById(id);
-let items=[];
-function number(s){return Number(String(s||'0').replace(/,/g,''))||0;}
-function iconUrl(id,kind){
- if(!/^minecraft:[a-z0-9_]+$/.test(id||'')) return '';
- return 'https://mcasset.cloud/26.3/assets/minecraft/textures/'+kind+'/'+id.split(':')[1]+'.png';
+'use strict';
+const $=x=>document.getElementById(x);
+const LIMIT=48;
+let items=[],page=1,rawCache='';
+const money=x=>Number(String(x||'0').replace(/,/g,''))||0;
+function iconCandidates(id){
+ if(!/^minecraft:[a-z0-9_]+$/.test(id||''))return [];
+ const key=id.split(':')[1];
+ return ['https://blockrender.dev/render/item/'+key+'.png?size=128',
+ 'https://blockrender.dev/render/block/'+key+'.png?size=128'];
+}
+function makeIcon(item){
+ const frame=document.createElement('div');frame.className='icon';
+ const img=document.createElement('img');img.alt='';img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';
+ const text=document.createElement('div');text.className='fallback';
+ text.textContent=(item.itemId||'??').replace(/^minecraft:/,'').replace(/_/g,' ').split(' ').slice(0,2).map(s=>s.charAt(0).toUpperCase()).join('').slice(0,2);
+ let idx=0,urls=iconCandidates(item.itemId);
+ img.onerror=()=>{if(idx<urls.length){img.src=urls[idx++]}else{frame.classList.add('failed')}};
+ if(urls.length){img.src=urls[idx++]}else{frame.classList.add('failed')}
+ frame.append(img,text);return frame;
+}
+function list(){
+ const query=$('search').value.trim().toLowerCase();
+ let array=items.filter(x=>!query||String(x.name||'').toLowerCase().includes(query)||String(x.itemId||'').toLowerCase().includes(query));
+ const choice=$('sort').value;
+ if(choice==='az')array.sort((a,b)=>String(a.name||a.itemId||'').localeCompare(String(b.name||b.itemId||''),'th'));
+ else if(choice==='low')array.sort((a,b)=>money(a.price)-money(b.price));
+ else if(choice==='high')array.sort((a,b)=>money(b.price)-money(a.price));
+ return array;
 }
 function render(){
- const sorted=[...items],mode=$('sort').value;
- if(mode==='az') sorted.sort((a,b)=>String(a.name).localeCompare(String(b.name)));
- if(mode==='low') sorted.sort((a,b)=>number(a.price)-number(b.price));
- if(mode==='high') sorted.sort((a,b)=>number(b.price)-number(a.price));
- const grid=$('grid');grid.replaceChildren();
- $('count').textContent=sorted.length+' รายการ';
- $('empty').hidden=sorted.length>0;
- for(const item of sorted){
+ const collection=list(),pages=Math.max(1,Math.ceil(collection.length/LIMIT));
+ page=Math.min(page,pages);
+ const visible=collection.slice((page-1)*LIMIT,page*LIMIT);
+ const root=$('grid');root.replaceChildren();
+ for(const item of visible){
   const card=document.createElement('article');card.className='item';
-  card.title=item.name||item.itemId||'';
-  const img=document.createElement('img');
-  img.alt='';img.loading='lazy';img.src=iconUrl(item.itemId,'item');
-  img.onerror=()=>{if(img.dataset.retry)return;img.dataset.retry='1';img.src=iconUrl(item.itemId,'block');};
-  const price=document.createElement('strong');price.className='price';price.textContent=item.price ? '⛁ '+item.price : '—';
-  card.append(img,price);grid.append(card);
+  card.title=(item.name||item.itemId||'') + (item.perStack?'\nราคาต่อสแต็ก: '+item.perStack:'');
+  const name=document.createElement('div');name.className='name';name.textContent=item.name||item.itemId||'ไม่ทราบชื่อ';
+  const price=document.createElement('strong');price.className='price';price.textContent=item.price||'—';
+  const id=document.createElement('div');id.className='itemid';id.textContent=(item.itemId||'').replace(/^minecraft:/,'');
+  card.append(makeIcon(item),name,price,id);root.append(card);
  }
+ $('count').textContent=items.length.toLocaleString('th-TH');
+ $('empty').hidden=visible.length>0;
+ $('pages').hidden=pages<=1;
+ $('prev').disabled=page<=1;$('next').disabled=page>=pages;
+ $('pageLabel').textContent=page+' / '+pages;
+ $('subtitle').textContent=collection.length+' รายการ • แสดงครั้งละ '+LIMIT+' รายการ';
+ $('status').textContent='เชื่อมต่อแล้ว'+(items.length?' • มีข้อมูล':' • รอสแกน');
 }
-async function update(){
+let searchTimer;
+$('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{page=1;render()},130)});
+$('sort').addEventListener('change',()=>{page=1;render()});
+$('prev').addEventListener('click',()=>{if(page>1){page--;render();scrollTo(0,0)}});
+$('next').addEventListener('click',()=>{page++;render();scrollTo(0,0)});
+async function refresh(){
  try{
-  const res=await fetch('/items',{cache:'no-store'});
-  if(!res.ok) return;
-  const list=await res.json();
-  if(Array.isArray(list)){items=list;render();}
- }catch(_){}
+  const response=await fetch('/items',{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);
+  const raw=await response.text();if(raw!==rawCache){
+   const data=JSON.parse(raw);if(Array.isArray(data)){items=data;rawCache=raw;render()}
+  }
+  $('last').textContent=new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+ }catch(e){$('status').textContent='เชื่อมต่อม็อดไม่ได้';}
 }
-$('sort').addEventListener('change',render);
-setInterval(update,1000);update();
+setInterval(refresh,1000);refresh();
 </script>
 </body>
 </html>
