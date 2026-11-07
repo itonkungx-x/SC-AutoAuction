@@ -188,12 +188,17 @@ public final class EasyLifeSettingsScreen extends Screen {
                 };
                 selectTab(Page.PRICE);
             });
+        addButtonRow("ui.setting.autopages", "ui.info.autopages",
+            systems.autoScanWorthPages ? "ui.enabled" : "ui.disabled", () -> {
+                systems.autoScanWorthPages = !systems.autoScanWorthPages;
+                selectTab(Page.PRICE);
+            });
         addButtonRow("ui.setting.notifications", "ui.info.notifications",
             systems.extractorNotifications ? "ui.enabled" : "ui.disabled", () -> {
                 systems.extractorNotifications = !systems.extractorNotifications;
                 selectTab(Page.PRICE);
             });
-        portBox = new EditBox(font, controlX, topY + 3 * rowHeight,
+        portBox = new EditBox(font, controlX, topY + 4 * rowHeight,
             controlWidth, 20, EasyLifeText.of("easylife.extractor.port"));
         portBox.setMaxLength(5);
         portBox.setValue(Integer.toString(systems.extractorPort));

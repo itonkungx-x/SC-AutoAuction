@@ -21,6 +21,8 @@ public final class EasyLifeSystemConfig {
     public boolean auctionEnabled = true;
     public boolean priceExtractorEnabled = false;
     public boolean extractorNotifications = true;
+    /** Only acts inside verified WORTH (page/total) menus. */
+    public boolean autoScanWorthPages = false;
     /** auto = inspect visible /worth listings; hover = capture only hovered item; both = both pipelines. */
     public String priceScanMode = "both";
     public int extractorPort = 8787;
@@ -71,6 +73,7 @@ public final class EasyLifeSystemConfig {
         c.auctionEnabled = auctionEnabled;
         c.priceExtractorEnabled = priceExtractorEnabled;
         c.extractorNotifications = extractorNotifications;
+        c.autoScanWorthPages = autoScanWorthPages;
         c.priceScanMode = priceScanMode;
         c.extractorPort = extractorPort;
         c.uiLanguage = uiLanguage;

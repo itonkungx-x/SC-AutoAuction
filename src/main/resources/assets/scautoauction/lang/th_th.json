@@ -119,5 +119,7 @@
   "ui.info.scanmode": "เลือกแบบอัตโนมัติ, Hover หรือใช้ทั้งคู่",
   "ui.scanmode.auto": "อัตโนมัติ",
   "ui.scanmode.hover": "Hover เท่านั้น",
-  "ui.scanmode.both": "ทั้งคู่ (Both)"
+  "ui.scanmode.both": "ทั้งคู่ (Both)",
+  "ui.setting.autopages": "เปลี่ยนหน้าอัตโนมัติ",
+  "ui.info.autopages": "สแกนช่องสินค้าตามกรอบสีแดง แล้วกดลูกศรหน้าถัดไป (เริ่มเมื่อเปิด /worth)"
 }

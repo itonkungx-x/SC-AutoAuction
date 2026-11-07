@@ -119,5 +119,7 @@
   "ui.info.scanmode": "Choose automatic, hover only, or both methods",
   "ui.scanmode.auto": "Automatic",
   "ui.scanmode.hover": "Hover only",
-  "ui.scanmode.both": "Both"
+  "ui.scanmode.both": "Both",
+  "ui.setting.autopages": "Auto scan all pages",
+  "ui.info.autopages": "Read the marked item region; click only a verified next-page arrow"
 }

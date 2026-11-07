@@ -50,6 +50,7 @@ public final class PriceExtractorModule implements AutomationModule {
     private static final KeyMapping TOGGLE = KeyMappingHelper.registerKeyMapping(new KeyMapping(
         "key.scautoauction.extractor", InputConstants.Type.KEYBOARD, InputConstants.KEY_F7, KeyMapping.Category.MISC));
     private static final Gson JSON = new Gson();
+    private final WorthPageScanner pageScanner = new WorthPageScanner();
     private static final int MAX_ITEMS = 2048;
     private static final Map<String, PriceEntry> ENTRIES = new LinkedHashMap<>();
 
@@ -87,6 +88,8 @@ public final class PriceExtractorModule implements AutomationModule {
         String status = "en_us".equals(language) ? statusEn : statusTh;
         return lastError.isBlank() ? status : lastError;
     }
+    public String getPageScanStatus() { return pageScanner.getStatus(); }
+
     public static String getDiagnostics() {
         // Compact: the Settings screen intentionally truncates strings > 62 chars.
         return "GUI " + screenMenuSize + " | Inv " + playerMenuSize
@@ -134,6 +137,7 @@ public final class PriceExtractorModule implements AutomationModule {
     public void tick(Minecraft mc) {
         while (TOGGLE.consumeClick()) toggleEnabled(mc);
         if (!EasyLifeSystemConfig.get().priceExtractorEnabled) {
+            pageScanner.reset();
             if (server != null) stopServer();
             statusTh = "ระบบปิดอยู่";
             statusEn = "Scanner disabled";
@@ -143,6 +147,7 @@ public final class PriceExtractorModule implements AutomationModule {
         if (++ticks % 4 != 0 || mc == null || mc.player == null || mc.gui == null) return;
         Screen current = mc.gui.screen();
         if (!(current instanceof AbstractContainerScreen<?> screen)) {
+            pageScanner.reset();
             // Keep the last scan's result visible in Mod Menu after closing /worth.
             if (isWorthTitle(lastDetectedTitle)) {
                 statusTh = "ผล /worth ล่าสุด: ช่อง " + lastScanned
@@ -159,6 +164,7 @@ public final class PriceExtractorModule implements AutomationModule {
         String title = screen.getTitle().getString();
         lastDetectedTitle = title;
         if (!isWorthTitle(title)) {
+            pageScanner.reset();
             statusTh = "รอเปิดหน้า /worth (" + title + ")";
             statusEn = "Waiting for /worth (" + title + ")";
             emptyRounds = 0;
@@ -230,6 +236,9 @@ public final class PriceExtractorModule implements AutomationModule {
         String newest = "";
         synchronized (PriceExtractorModule.class) {
             for (int i = 0; i < topSlots; i++) {
+                // The screenshot identifies a 6x4 product rectangle, never
+                // scan page buttons or the decorative edge of the /worth GUI.
+                if (topSlots == 54 && !WorthPageScanner.itemSlot(i)) continue;
                 ItemStack stack = slots.get(i).getItem();
                 if (stack.isEmpty()) continue;
                 seen++;
@@ -260,6 +269,8 @@ public final class PriceExtractorModule implements AutomationModule {
         }
         lastScanned = seen;
         lastPriceLines = linesFound;
+        if (topSlots == 54 && !"hover".equals(scanMode))
+            pageScanner.tick(mc, screen, seen, linesFound);
         statusTh = "กำลังสแกน /worth • พบช่อง " + seen + " • มีราคา " + linesFound
             + " • สะสม " + itemCount;
         statusEn = "Scanning /worth • Items " + seen + " • Priced " + linesFound
