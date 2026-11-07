@@ -185,6 +185,11 @@ public final class PriceExtractorModule implements AutomationModule {
         if (EasyLifeSystemConfig.get().autoScanWorthPages) {
             pageScanner.tick(mc, screen, PriceExtractorModule::hasSavedPrice);
             pageScanStatus = pageScanner.getStatus();
+        } else {
+            // F7 must fully cancel the active run, allowing the next F7
+            // to start from the first product without a Minecraft restart.
+            pageScanner.reset(mc);
+            pageScanStatus = "Auto Hover ปิดอยู่ • กด F7 เพื่อเริ่ม";
         }
 
         if ("hover".equals(scanMode) && !EasyLifeSystemConfig.get().autoScanWorthPages) {
