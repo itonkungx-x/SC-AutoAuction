@@ -99,6 +99,7 @@ public final class PriceExtractorModule implements AutomationModule {
 
     public static synchronized void clearItems() {
         ENTRIES.clear();
+        PriceArchive.saveLocal("[]");
         itemCount = 0;
         lastItem = "ยังไม่พบข้อมูล";
         lastJson = "{}";
@@ -117,6 +118,7 @@ public final class PriceExtractorModule implements AutomationModule {
 
     @Override public String id() { return "price_extractor"; }
     @Override public void initialize() {
+        restoreCache();
         ItemTooltipCallback.EVENT.register((stack, context, flag, lines) ->
             observeRenderedTooltip(stack, lines));
         // KeyMapping.consumeClick() is normally not populated while a screen is open.
@@ -144,7 +146,9 @@ public final class PriceExtractorModule implements AutomationModule {
             return;
         }
         ensureServer();
-        if (++ticks % 4 != 0 || mc == null || mc.player == null || mc.gui == null) return;
+        // Retain all recorded prices across restarts, even with /worth closed.
+        if (++ticks % 4 == 0) PriceArchive.saveEventually(itemsJson());
+        if (ticks % 4 != 0 || mc == null || mc.player == null || mc.gui == null) return;
         Screen current = mc.gui.screen();
         if (!(current instanceof AbstractContainerScreen<?> screen)) {
             pageScanner.reset();
@@ -575,6 +579,26 @@ public final class PriceExtractorModule implements AutomationModule {
         if (server != null) server.stop(0);
         server = null;
         serverPort = -1;
+    }
+
+    /** Restore the last known prices after restarting Minecraft. */
+    private static synchronized void restoreCache() {
+        try {
+            PriceEntry[] saved = JSON.fromJson(PriceArchive.load(), PriceEntry[].class);
+            if (saved == null) return;
+            for (PriceEntry e : saved) {
+                if (e == null || e.itemId == null || e.name == null
+                    || e.price == null || e.price.isBlank()
+                    || !e.itemId.matches("[a-z0-9_.-]+:[a-z0-9_./-]+")) continue;
+                if (ENTRIES.size() >= MAX_ITEMS) break;
+                ENTRIES.put(e.itemId + "|" + e.name, e);
+                lastItem = e.name + " = " + e.price;
+                lastJson = JSON.toJson(e);
+            }
+            itemCount = ENTRIES.size();
+        } catch (Exception ex) {
+            System.err.println("[Easylife] Invalid cached price entry: " + ex.getClass().getSimpleName());
+        }
     }
 
     private static String itemsJson() {
