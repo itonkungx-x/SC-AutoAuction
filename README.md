@@ -177,7 +177,7 @@ Easylife now adapts all four ideas to the existing Price Extractor module. The S
 - Page search, A–Z / lowest price / highest price sort, cached polling, lazy-load and 48-card pagination support 1,100+ items without rebuilding 1,100 image nodes each second.
 - Serves the existing Siamcraft logo from `/logo.png` on the local Price Extractor HTTP server so the logo works offline.
 - Preserves /worth scanner, Auction, Auto / Hover / Both, Thai/English Mod Menu UI and auto updater behavior.
-- Release asset must be published on GitHub as `Easylife-in-Siamcraft-26.3-0.2.13.jar` for existing v0.2.11 auto-updaters to discover it.
+- Release asset must be published on GitHub as `Easylife-in-Siamcraft-26.3-0.2.14.jar` for existing v0.2.11 auto-updaters to discover it.
 - Image icons use a third-party online render API; custom server-specific items may use text fallback. Actual in-game Price Extractor end-to-end testing is separate from build checks.
 
 ## v0.2.13 — Auto /worth pagination + persistent web sync
@@ -191,3 +191,14 @@ Easylife now adapts all four ideas to the existing Price Extractor module. The S
 - Deployed at https://siamcraft-price.vercel.app using a private Vercel Blob store and a token-protected /api/sync endpoint. The public /api/items endpoint is read-only.
 - Installation: Place the JAR in mods/. Place the separately delivered easylife-remote.json in config/ (do NOT replace easylife-systems.json). Enable Price Scan, choose Auto/Both, enable automatic page scanning, then open /worth.
 - LIMITATIONS: Live Minecraft server GUI compatibility is not verified by CI. The observed next-arrow slot and item type can change if a plugin updates. Online storage incurs usage subject to the Vercel account quota. Custom item icon imagery may have external-render-service fallbacks.
+
+
+## Easylife v0.2.14 — Real Auto Hover for Minecraft 26.3
+
+- Fixed a key issue in earlier versions: Auto previously inspected inventory tooltips without physically moving the cursor, and the page scanner could advance before all slots were visited.
+- When Price Scan + Auto scan all pages is enabled, **automatically move the real mouse pointer over the 24 marked /worth item slots** in order, dwell to allow the actual rendered tooltip event to fire, record prices, then click the verified page-next arrow at slot 52. Do not click the item slots.
+- **SDL3 native mouse control** (`org.lwjgl.sdl.SDLMouse`), not the removed GLFW API. Minecraft 26.3 switched its input/window backend to SDL3.
+- New configs default to automatic all-pages scanning. Existing configs keep their explicit preference. **F7 while /worth is open toggles Auto Hover on/off**; when starting it also enables the Price Extractor and sets Both mode.
+- Stop safely on unrecognized GUI layout, no priced entries, missing cursor slot tooltip prices, incorrect next button, stale page number or item carried on cursor. The original mouse position is restored at stop.
+- Local JSON cache and secure Vercel/Supabase sync remain unchanged. No new backend credentials required.
+- This is client-only. CI compilation cannot prove the mouse motion or custom /worth tooltip behavior on the actual Siamcraft server. Send `config/easylife-price-diagnostic.json` plus latest.log if it pauses.

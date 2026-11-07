@@ -121,7 +121,7 @@
   "ui.scanmode.hover": "Hover เท่านั้น",
   "ui.scanmode.both": "ทั้งคู่ (Both)",
   "ui.setting.autopages": "เปลี่ยนหน้าอัตโนมัติ",
-  "ui.info.autopages": "สแกนช่องสินค้าตามกรอบสีแดง แล้วกดลูกศรหน้าถัดไป (เริ่มเมื่อเปิด /worth)",
+  "ui.info.autopages": "ชี้ไอเท็มทุกช่องจริง รอราคา แล้วคลิกลูกศรเปลี่ยนหน้า (F7 เริ่ม/หยุด)",
   "ui.setting.page_status": "สถานะทุกหน้า",
   "ui.info.page_status": "หยุดเมื่อพบหน้าที่ไม่ตรงหรือครบทุกหน้า",
   "ui.setting.cloud": "การซิงก์เว็บไซต์",

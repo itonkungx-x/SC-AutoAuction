@@ -26,6 +26,7 @@ jobs:
           test -s "$JAR"
           jar tf "$JAR" | grep -Fq 'org/itonkung/scautoauction/PriceExtractorModule.class'
           jar tf "$JAR" | grep -Fq 'org/itonkung/scautoauction/WorthPageScanner.class'
+          javap -c -classpath "$JAR" org.itonkung.scautoauction.WorthPageScanner | grep -Fq 'org/lwjgl/sdl/SDLMouse'
           jar tf "$JAR" | grep -Fq 'org/itonkung/scautoauction/PriceArchive.class'
           jar tf "$JAR" | grep -Fq 'org/itonkung/scautoauction/LegacyUnitPriceParser.class'
           jar tf "$JAR" | grep -Fq 'org/itonkung/scautoauction/PriceToast.class'
