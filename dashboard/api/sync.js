@@ -20,7 +20,12 @@ function sanitize(row) {
   const price = String(row.price || perItem || perStack).slice(0, 30);
   if (![perItem, perStack, price].every(x => !x || /^[\d,.]+$/.test(x))) return null;
   if (!price) return null;
-  return { itemId, name, perItem, perStack, price, updatedAt: new Date().toISOString() };
+  const candidate = Date.parse(String(row.updatedAt || ''));
+  const updatedAt = Number.isFinite(candidate)
+    && candidate >= Date.UTC(2020,0,1)
+    && candidate <= Date.now() + 86_400_000
+    ? new Date(candidate).toISOString() : new Date().toISOString();
+  return { itemId, name, perItem, perStack, price, updatedAt };
 }
 /**
  * Private write API. No Supabase service key or Blob secret is exposed to the mod.
@@ -60,7 +65,14 @@ export default async function handler(req, res) {
         return res.status(503).json({ error: 'Existing price snapshot unreadable' });
       }
     }
-    for (const item of incoming) merged.set(item.itemId + '|' + item.name, item);
+    for (const item of incoming) {
+      const key = item.itemId + '|' + item.name;
+      const old = merged.get(key);
+      // A restarted client must not replace a newer cloud price with stale local cache.
+      if (!old || Date.parse(item.updatedAt) >= Date.parse(old.updatedAt)) {
+        merged.set(key, item);
+      }
+    }
     if (merged.size > MAX_ITEMS) return res.status(422).json({ error: 'Item limit exceeded' });
     const updatedAt = new Date().toISOString();
     const value = JSON.stringify({ items: [...merged.values()], updatedAt });
