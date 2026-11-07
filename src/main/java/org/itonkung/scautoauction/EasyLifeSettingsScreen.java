@@ -81,7 +81,7 @@ public final class EasyLifeSettingsScreen extends Screen {
         contentX = left + 22;
         searchY = 65;
         topY = 122;
-        rowHeight = Math.max(25, Math.min(39, (height - topY - 65) / 9));
+        rowHeight = Math.max(22, Math.min(39, (height - topY - 85) / 12));
         error = "";
 
         int tabsX = 145;
@@ -209,6 +209,10 @@ public final class EasyLifeSettingsScreen extends Screen {
             () -> PriceExtractorModule.getStatusForLanguage(systems.uiLanguage));
         addTextRow("ui.setting.diagnostics", "ui.info.diagnostics",
             PriceExtractorModule::getDiagnostics);
+        addTextRow("ui.setting.page_status", "ui.info.page_status",
+            PriceExtractorModule::getPageScanStatus);
+        addTextRow("ui.setting.cloud", "ui.info.cloud",
+            PriceArchive::getSyncStatus);
         addButtonRow("ui.setting.website", "ui.info.website",
             "ui.open_website", this::openWebsite);
         addButtonRow("ui.setting.clear", "ui.info.clear",

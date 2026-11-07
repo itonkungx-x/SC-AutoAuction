@@ -121,5 +121,9 @@
   "ui.scanmode.hover": "Hover เท่านั้น",
   "ui.scanmode.both": "ทั้งคู่ (Both)",
   "ui.setting.autopages": "เปลี่ยนหน้าอัตโนมัติ",
-  "ui.info.autopages": "สแกนช่องสินค้าตามกรอบสีแดง แล้วกดลูกศรหน้าถัดไป (เริ่มเมื่อเปิด /worth)"
+  "ui.info.autopages": "สแกนช่องสินค้าตามกรอบสีแดง แล้วกดลูกศรหน้าถัดไป (เริ่มเมื่อเปิด /worth)",
+  "ui.setting.page_status": "สถานะทุกหน้า",
+  "ui.info.page_status": "หยุดเมื่อพบหน้าที่ไม่ตรงหรือครบทุกหน้า",
+  "ui.setting.cloud": "การซิงก์เว็บไซต์",
+  "ui.info.cloud": "ส่งขึ้นเว็บโดยใช้ Token เฉพาะเครื่อง"
 }

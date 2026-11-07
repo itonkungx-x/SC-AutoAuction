@@ -121,5 +121,9 @@
   "ui.scanmode.hover": "Hover only",
   "ui.scanmode.both": "Both",
   "ui.setting.autopages": "Auto scan all pages",
-  "ui.info.autopages": "Read the marked item region; click only a verified next-page arrow"
+  "ui.info.autopages": "Read the marked item region; click only a verified next-page arrow",
+  "ui.setting.page_status": "Pagination",
+  "ui.info.page_status": "Stops on unexpected layout or final page",
+  "ui.setting.cloud": "Website sync",
+  "ui.info.cloud": "Uploads with a device-specific sync token"
 }

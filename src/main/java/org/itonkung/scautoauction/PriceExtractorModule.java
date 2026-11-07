@@ -51,6 +51,7 @@ public final class PriceExtractorModule implements AutomationModule {
         "key.scautoauction.extractor", InputConstants.Type.KEYBOARD, InputConstants.KEY_F7, KeyMapping.Category.MISC));
     private static final Gson JSON = new Gson();
     private final WorthPageScanner pageScanner = new WorthPageScanner();
+    private static volatile String pageScanStatus = "ยังไม่เริ่ม";
     private static final int MAX_ITEMS = 2048;
     private static final Map<String, PriceEntry> ENTRIES = new LinkedHashMap<>();
 
@@ -82,6 +83,7 @@ public final class PriceExtractorModule implements AutomationModule {
     private static long lastShortcutNanos;
 
     public static int getFoundCount() { return itemCount; }
+    public static String getPageScanStatus() { return pageScanStatus; }
     public static String getLastFoundName() { return lastItem; }
     public static String getStatus() { return lastError.isBlank() ? statusTh : lastError; }
     public static String getStatusForLanguage(String language) {
@@ -140,6 +142,7 @@ public final class PriceExtractorModule implements AutomationModule {
         while (TOGGLE.consumeClick()) toggleEnabled(mc);
         if (!EasyLifeSystemConfig.get().priceExtractorEnabled) {
             pageScanner.reset();
+            pageScanStatus = "ระบบปิดอยู่";
             if (server != null) stopServer();
             statusTh = "ระบบปิดอยู่";
             statusEn = "Scanner disabled";
@@ -273,8 +276,10 @@ public final class PriceExtractorModule implements AutomationModule {
         }
         lastScanned = seen;
         lastPriceLines = linesFound;
-        if (topSlots == 54 && !"hover".equals(scanMode))
+        if (topSlots == 54 && !"hover".equals(scanMode)) {
             pageScanner.tick(mc, screen, seen, linesFound);
+            pageScanStatus = pageScanner.getStatus();
+        }
         statusTh = "กำลังสแกน /worth • พบช่อง " + seen + " • มีราคา " + linesFound
             + " • สะสม " + itemCount;
         statusEn = "Scanning /worth • Items " + seen + " • Priced " + linesFound
