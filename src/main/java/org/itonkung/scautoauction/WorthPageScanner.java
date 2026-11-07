@@ -8,10 +8,10 @@ import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.lwjgl.BufferUtils;
-import org.lwjgl.glfw.GLFW;
+import org.lwjgl.sdl.SDLMouse;
 
 import java.lang.reflect.Field;
-import java.nio.DoubleBuffer;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -138,16 +138,16 @@ public final class WorthPageScanner {
             top.setAccessible(true);
             double guiX=left.getInt(screen)+slot.x+8;
             double guiY=top.getInt(screen)+slot.y+8;
-            long hwnd=mc.getWindow().getWindow();
+            long hwnd=mc.getWindow().handle();
             if (!savedPointer) {
-                DoubleBuffer x=BufferUtils.createDoubleBuffer(1);
-                DoubleBuffer y=BufferUtils.createDoubleBuffer(1);
-                GLFW.glfwGetCursorPos(hwnd,x,y);
+                FloatBuffer x=BufferUtils.createFloatBuffer(1);
+                FloatBuffer y=BufferUtils.createFloatBuffer(1);
+                SDLMouse.SDL_GetMouseState(x,y);
                 originalX=x.get(0); originalY=y.get(0); savedPointer=true;
             }
             double px=guiX*mc.getWindow().getWidth() / Math.max(1,mc.getWindow().getGuiScaledWidth());
             double py=guiY*mc.getWindow().getHeight() / Math.max(1,mc.getWindow().getGuiScaledHeight());
-            GLFW.glfwSetCursorPos(hwnd,px,py);
+            SDLMouse.SDL_WarpMouseInWindow(hwnd,(float)px,(float)py);
             return true;
         } catch (ReflectiveOperationException | RuntimeException ex) {
             System.err.println("[Easylife] Auto Hover: "+ex.getClass().getSimpleName()+": "+ex.getMessage());
@@ -158,7 +158,7 @@ public final class WorthPageScanner {
         if (!savedPointer) return;
         savedPointer=false;
         if (mc==null) return;
-        try { GLFW.glfwSetCursorPos(mc.getWindow().getWindow(),originalX,originalY); }
+        try { SDLMouse.SDL_WarpMouseInWindow(mc.getWindow().handle(),(float)originalX,(float)originalY); }
         catch (RuntimeException ignored) {}
     }
     private void stop(Minecraft mc,String message) {
