@@ -44,7 +44,9 @@ main{padding:28px 0 50px}
 .name{font-weight:700;font-size:13px;text-align:center;line-height:1.25;min-height:38px;max-width:100%;overflow-wrap:anywhere;display:flex;align-items:center}
 .price{font-size:21px;color:var(--gold);font-weight:850;margin-top:auto;padding-top:12px;letter-spacing:.012em}
 .price::before{content:"⛁ ";font-size:15px}
-.itemid{font-size:10px;color:#aaa4a7;text-align:center;margin-top:5px;max-width:100%;overflow-wrap:anywhere}
+.compact-sort{flex-direction:row;align-items:center;gap:10px}.compact-sort select{height:36px;min-width:158px}
+.itemid{display:none}
+[hidden]{display:none!important}
 .empty{padding:50px 22px;border:1px dashed #605047;border-radius:18px;text-align:center;color:var(--sub)}
 .pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin:28px 0 10px}
 .pagination button{border:1px solid #805f40;background:#29222b;color:var(--text);padding:10px 16px;border-radius:12px;cursor:pointer}
@@ -53,31 +55,30 @@ main{padding:28px 0 50px}
 footer{text-align:center;color:#88838c;padding:14px 0 34px;font-size:12px}
 @media(max-width:850px){.brand img{width:116px}.stats{display:grid;grid-template-columns:repeat(2,1fr)}.stat.status{grid-column:1/-1}.grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:11px}.item{min-height:202px}.hero{padding:20px 0}.wrap{width:min(100% - 26px,1340px)}}
 @media(max-width:540px){.brand{width:100%}.controls{width:100%}.field,.field input,.field select{width:100%}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.brand img{width:102px}.list-head .note{display:none}}
+
+/* Layout v0.2.13: logo-only header, minimal cards, stable visual updates */
+.hero{padding:18px 0 8px}
+.brand img{width:180px;max-height:86px}
+.stats{padding:6px 0 18px}
+@media (max-width:850px){.stat.status{display:none}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
 <header>
  <div class="wrap">
-  <div class="hero">
-   <div class="brand"><img src="/logo.png" alt="Siam Craft" width="160" height="72"><div><h1>Price Extractor</h1><p class="tagline">ราคาไอเท็ม Siamcraft จาก /worth • แสดงผลแบบเรียลไทม์</p></div></div>
-   <div class="controls">
-    <label class="field">ค้นหา<input id="search" type="search" placeholder="ชื่อไอเท็ม หรือ Minecraft ID" autocomplete="off"></label>
-    <label class="field">เรียงตาม<select id="sort">
-     <option value="az">ชื่อ A–Z</option>
-     <option value="low">ราคาน้อย → มาก</option>
-     <option value="high">ราคามาก → น้อย</option>
-    </select></label>
-   </div>
-  </div>
+  <div class="hero"><div class="brand"><img src="/logo.png" alt="Siam Craft" width="180" height="76"></div></div>
   <section class="stats">
    <div class="stat"><span>รายการที่สแกนแล้ว</span><strong id="count">0</strong></div>
    <div class="stat"><span>อัปเดตล่าสุด</span><strong id="last">—</strong></div>
-   <div class="stat status"><span>สถานะระบบ</span><strong id="status">กำลังเชื่อมต่อ...</strong></div>
   </section>
  </div>
 </header>
 <main class="wrap">
- <div class="list-head"><h2>รายการราคาไอเท็ม</h2><span class="note" id="subtitle">รีเฟรชจากม็อดทุก 1 วินาที</span></div>
+ <div class="list-head"><h2>รายการราคาไอเท็ม <span class="note" id="subtitle"></span></h2>
+  <label class="field compact-sort">เรียงราคา <select id="sort" aria-label="เรียงลำดับราคา">
+   <option value="az">ชื่อ A–Z</option><option value="low">ราคาน้อย → มาก</option><option value="high">ราคามาก → น้อย</option>
+  </select></label>
+ </div>
  <div class="grid" id="grid"></div>
  <div class="empty" id="empty">ยังไม่มีข้อมูลราคา — เปิด /worth และสแกนในเกม</div>
  <nav class="pagination" id="pages" hidden><button type="button" id="prev">ก่อนหน้า</button><span id="pageLabel"></span><button type="button" id="next">ถัดไป</button></nav>
@@ -87,7 +88,10 @@ footer{text-align:center;color:#88838c;padding:14px 0 34px;font-size:12px}
 'use strict';
 const $=x=>document.getElementById(x);
 const LIMIT=48;
+const endpoint=(location.hostname==='127.0.0.1'||location.hostname==='localhost')?'/items':'/api/items';
 let items=[],page=1,rawCache='';
+const cardCache=new Map();
+let previousKeys=[];
 const money=x=>Number(String(x||'0').replace(/,/g,''))||0;
 function iconCandidates(id){
  if(!/^minecraft:[a-z0-9_]+$/.test(id||''))return [];
@@ -105,51 +109,66 @@ function makeIcon(item){
  if(urls.length){img.src=urls[idx++]}else{frame.classList.add('failed')}
  frame.append(img,text);return frame;
 }
+function displayName(item){
+ const raw=String(item.name||item.itemId||'Unknown Item').replace(/^minecraft:/i,'').replace(/_/g,' ').trim();
+ return raw.replace(/\b[a-zA-Z][a-zA-Z0-9]*\b/g,word=>word.toUpperCase()==='TNT'?'TNT':word[0].toUpperCase()+word.slice(1).toLowerCase());
+}
 function list(){
- const query=$('search').value.trim().toLowerCase();
- let array=items.filter(x=>!query||String(x.name||'').toLowerCase().includes(query)||String(x.itemId||'').toLowerCase().includes(query));
+ let array=[...items];
  const choice=$('sort').value;
  if(choice==='az')array.sort((a,b)=>String(a.name||a.itemId||'').localeCompare(String(b.name||b.itemId||''),'th'));
  else if(choice==='low')array.sort((a,b)=>money(a.price)-money(b.price));
  else if(choice==='high')array.sort((a,b)=>money(b.price)-money(a.price));
  return array;
 }
+function cardFor(item){
+ const key=String(item.itemId||'')+'|'+String(item.name||'');
+ let card=cardCache.get(key);
+ if(!card){
+  card=document.createElement('article');card.className='item';
+  const title=document.createElement('div');title.className='name';title.textContent=displayName(item);
+  const price=document.createElement('strong');price.className='price';
+  card.append(makeIcon(item),title,price);
+  cardCache.set(key,card);
+ }
+ const price=card.querySelector('.price');
+ if(price.textContent!==String(item.price||'—'))price.textContent=String(item.price||'—');
+ card.title=displayName(item)+(item.perStack?'\nราคาต่อสแต็ก: '+item.perStack:'');
+ return card;
+}
 function render(){
  const collection=list(),pages=Math.max(1,Math.ceil(collection.length/LIMIT));
  page=Math.min(page,pages);
  const visible=collection.slice((page-1)*LIMIT,page*LIMIT);
- const root=$('grid');root.replaceChildren();
- for(const item of visible){
-  const card=document.createElement('article');card.className='item';
-  card.title=(item.name||item.itemId||'') + (item.perStack?'\nราคาต่อสแต็ก: '+item.perStack:'');
-  const name=document.createElement('div');name.className='name';name.textContent=item.name||item.itemId||'ไม่ทราบชื่อ';
-  const price=document.createElement('strong');price.className='price';price.textContent=item.price||'—';
-  const id=document.createElement('div');id.className='itemid';id.textContent=(item.itemId||'').replace(/^minecraft:/,'');
-  card.append(makeIcon(item),name,price,id);root.append(card);
- }
+ const keys=visible.map(x=>String(x.itemId||'')+'|'+String(x.name||''));
+ const root=$('grid');
+ const changed=keys.length!==previousKeys.length||keys.some((k,i)=>k!==previousKeys[i]);
+ const nodes=visible.map(cardFor); // Reuses existing <img>; never recreates icons on price-only updates.
+ if(changed){root.replaceChildren(...nodes);previousKeys=keys;}
  $('count').textContent=items.length.toLocaleString('th-TH');
  $('empty').hidden=visible.length>0;
  $('pages').hidden=pages<=1;
  $('prev').disabled=page<=1;$('next').disabled=page>=pages;
  $('pageLabel').textContent=page+' / '+pages;
- $('subtitle').textContent=collection.length+' รายการ • แสดงครั้งละ '+LIMIT+' รายการ';
- $('status').textContent='เชื่อมต่อแล้ว'+(items.length?' • มีข้อมูล':' • รอสแกน');
+ $('subtitle').textContent='('+collection.length.toLocaleString('th-TH')+' รายการ)';
 }
-let searchTimer;
-$('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{page=1;render()},130)});
 $('sort').addEventListener('change',()=>{page=1;render()});
 $('prev').addEventListener('click',()=>{if(page>1){page--;render();scrollTo(0,0)}});
 $('next').addEventListener('click',()=>{page++;render();scrollTo(0,0)});
 async function refresh(){
  try{
-  const response=await fetch('/items',{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);
+  const response=await fetch(endpoint,{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);
   const raw=await response.text();if(raw!==rawCache){
-   const data=JSON.parse(raw);if(Array.isArray(data)){items=data;rawCache=raw;render()}
+   const payload=JSON.parse(raw),data=Array.isArray(payload)?payload:payload.items;
+   if(Array.isArray(data)){
+     items=data;rawCache=raw;render();
+     const recent=payload.updatedAt||data.reduce((latest,x)=>x.updatedAt>latest?x.updatedAt:latest,'');
+     if(recent){const t=new Date(recent);if(!isNaN(t.getTime()))$('last').textContent=t.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});}
+   }
   }
-  $('last').textContent=new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
- }catch(e){$('status').textContent='เชื่อมต่อม็อดไม่ได้';}
+ }catch(e){$('last').textContent='ออฟไลน์';}
 }
-setInterval(refresh,1000);refresh();
+setInterval(refresh,location.hostname.endsWith('.vercel.app')?10000:1000);refresh();
 </script>
 </body>
 </html>
